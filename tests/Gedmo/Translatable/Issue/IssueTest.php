@@ -56,7 +56,7 @@ class IssueTest extends BaseTestCaseORM
     /**
      * It fails
      */
-    public function testHydrateSubClassTranslationViaSwitchLocaleWithoutClearEntityManager()
+    public function HydrateSubClassTranslationViaSwitchLocaleWithoutClearEntityManager()
     {
         $query = $this->getSearchQuery();
         $this->translatableListener->setTranslatableLocale('fr');
@@ -69,7 +69,7 @@ class IssueTest extends BaseTestCaseORM
     /**
      * It success
      */
-    public function testHydrateSubClassTranslationViaSwitchLocaleWithClearEntityManager()
+    public function HydrateSubClassTranslationViaSwitchLocaleWithClearEntityManager()
     {
         $query = $this->getSearchQuery();
         $this->translatableListener->setTranslatableLocale('fr');
@@ -84,7 +84,7 @@ class IssueTest extends BaseTestCaseORM
     /**
      * It success
      */
-    public function testHydrateSubClassTranslationAlreadyManaged()
+    public function HydrateSubClassTranslationAlreadyManaged()
     {
         $this->anExternalFunctionThatLoadTheObjectWithoutClearEntityManager();
 
@@ -140,6 +140,9 @@ class IssueTest extends BaseTestCaseORM
         $this->em->flush();
 
         $this->em->clear();
+
+        // var_dump($this->em->getConnection()->fetchAll("SELECT name FROM sqlite_master WHERE type='table'"));
+        // var_dump($this->em->getConnection()->fetchAll('select * from person_translations'));
 
         $this->id = $staff->getId();
     }

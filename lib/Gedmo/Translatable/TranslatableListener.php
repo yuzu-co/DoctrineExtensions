@@ -490,10 +490,12 @@ class TranslatableListener extends MappedEventSubscriber
             $this->translatedInLocale[$oid] = $locale;
         }
 
+        // var_dump('postload');
         if ($this->skipOnLoad) {
             return;
         }
 
+        // var_dump($config, $locale, $this->defaultLocale, $this->persistDefaultLocaleTranslation);
         if (isset($config['fields']) && ($locale !== $this->defaultLocale || $this->persistDefaultLocaleTranslation)) {
             // fetch translations
             $translationClass = $this->getTranslationClass($ea, $config['useObjectClass']);

@@ -63,10 +63,13 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
                                 'field' => $trans->getField(),
                                 'content' => $trans->getContent(),
                             );
+                            var_dump('found', $result);
+                            $found = true;
+                            break 2;
                         }
                     }
-                    $found = true;
-                    break;
+                    // $found = true;
+                    // break;
                 }
             }
             // if collection is not set, fetch it through relation
@@ -75,6 +78,7 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
                 $dql .= ' WHERE t.locale = :locale';
                 $dql .= ' AND t.object = :object';
 
+                var_dump($dql);
                 $q = $em->createQuery($dql);
                 $q->setParameters(compact('object', 'locale'));
                 $result = $q->getArrayResult();
@@ -92,6 +96,7 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
             $q->setParameters(compact('objectId', 'locale', 'objectClass'));
             $result = $q->getArrayResult();
         }
+        var_dump('was hit');
 
         return $result;
     }

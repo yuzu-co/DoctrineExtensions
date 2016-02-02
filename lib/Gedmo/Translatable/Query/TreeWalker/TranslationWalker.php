@@ -304,52 +304,65 @@ class TranslationWalker extends SqlWalker
             $transClass = $this->listener->getTranslationClass($ea, $meta->name);
             $transMeta = $em->getClassMetadata($transClass);
             $transTable = $em->getConfiguration()->getQuoteStrategy()->getTableName($transMeta, $this->platform);
-            foreach ($config['fields'] as $field) {
-                $compTblAlias = $this->walkIdentificationVariable($dqlAlias, $field);
-                $tblAlias = $this->getSQLTableAlias('trans'.$compTblAlias.$field);
-                $sql = " {$joinStrategy} JOIN ".$transTable.' '.$tblAlias;
-                $sql .= ' ON '.$tblAlias.'.'.$transMeta->getQuotedColumnName('locale', $this->platform)
-                    .' = '.$this->conn->quote($locale);
-                $sql .= ' AND '.$tblAlias.'.'.$transMeta->getQuotedColumnName('field', $this->platform)
-                    .' = '.$this->conn->quote($field);
-                $identifier = $meta->getSingleIdentifierFieldName();
-                $idColName = $meta->getQuotedColumnName($identifier, $this->platform);
-                if ($ea->usesPersonalTranslation($transClass)) {
-                    $sql .= ' AND '.$tblAlias.'.'.$transMeta->getSingleAssociationJoinColumnName('object')
-                        .' = '.$compTblAlias.'.'.$idColName;
-                } else {
-                    $sql .= ' AND '.$tblAlias.'.'.$transMeta->getQuotedColumnName('objectClass', $this->platform)
-                        .' = '.$this->conn->quote($config['useObjectClass']);
 
-                    $mappingFK = $transMeta->getFieldMapping('foreignKey');
-                    $mappingPK = $meta->getFieldMapping($identifier);
-                    $fkColName = $this->getCastedForeignKey($compTblAlias.'.'.$idColName, $mappingFK['type'], $mappingPK['type']);
-                    $sql .= ' AND '.$tblAlias.'.'.$transMeta->getQuotedColumnName('foreignKey', $this->platform)
-                        .' = '.$fkColName;
+            $fieldGroups[$meta->name] = isset($config['fields']) ? $config['fields'] : array();
+            foreach ($meta->discriminatorMap as $childClass) {
+                $cm = $em->getClassMetadata($childClass);
+                $config = $this->listener->getConfiguration($em, $cm->name);
+                if ($config && isset($config['fields'])) {
+                    $fieldGroups[$cm->name] = $config['fields'];
                 }
-                isset($this->components[$dqlAlias]) ? $this->components[$dqlAlias] .= $sql : $this->components[$dqlAlias] = $sql;
+            }
+            foreach ($fieldGroups as $cl => $fields) {
+                $meta = $em->getClassMetadata($cl);
+                foreach ($fields as $field) {
+                    $compTblAlias = $this->walkIdentificationVariable($dqlAlias, $field);
+                    $tblAlias = $this->getSQLTableAlias('trans'.$compTblAlias.$field);
+                    $sql = " {$joinStrategy} JOIN ".$transTable.' '.$tblAlias;
+                    $sql .= ' ON '.$tblAlias.'.'.$transMeta->getQuotedColumnName('locale', $this->platform)
+                        .' = '.$this->conn->quote($locale);
+                    $sql .= ' AND '.$tblAlias.'.'.$transMeta->getQuotedColumnName('field', $this->platform)
+                        .' = '.$this->conn->quote($field);
+                    $identifier = $meta->getSingleIdentifierFieldName();
+                    $idColName = $meta->getQuotedColumnName($identifier, $this->platform);
+                    if ($ea->usesPersonalTranslation($transClass)) {
+                        $sql .= ' AND '.$tblAlias.'.'.$transMeta->getSingleAssociationJoinColumnName('object')
+                            .' = '.$compTblAlias.'.'.$idColName;
+                    } else {
+                        $sql .= ' AND '.$tblAlias.'.'.$transMeta->getQuotedColumnName('objectClass', $this->platform)
+                            .' = '.$this->conn->quote($config['useObjectClass']);
 
-                $originalField = $compTblAlias.'.'.$meta->getQuotedColumnName($field, $this->platform);
-                $substituteField = $tblAlias.'.'.$transMeta->getQuotedColumnName('content', $this->platform);
+                        $mappingFK = $transMeta->getFieldMapping('foreignKey');
+                        $mappingPK = $meta->getFieldMapping($identifier);
+                        $fkColName = $this->getCastedForeignKey($compTblAlias.'.'.$idColName, $mappingFK['type'], $mappingPK['type']);
+                        $sql .= ' AND '.$tblAlias.'.'.$transMeta->getQuotedColumnName('foreignKey', $this->platform)
+                            .' = '.$fkColName;
+                    }
+                    isset($this->components[$dqlAlias]) ? $this->components[$dqlAlias] .= $sql : $this->components[$dqlAlias] = $sql;
 
-                // Treat translation as original field type
-                $fieldMapping = $meta->getFieldMapping($field);
-                if ((($this->platform instanceof MySqlPlatform) &&
-                    in_array($fieldMapping["type"], array("decimal"))) ||
-                    (!($this->platform instanceof MySqlPlatform) &&
-                    !in_array($fieldMapping["type"], array("datetime", "datetimetz", "date", "time")))) {
-                    $type = Type::getType($fieldMapping["type"]);
-                    $substituteField = 'CAST('.$substituteField.' AS '.$type->getSQLDeclaration($fieldMapping, $this->platform).')';
+                    $originalField = $compTblAlias.'.'.$meta->getQuotedColumnName($field, $this->platform);
+                    $substituteField = $tblAlias.'.'.$transMeta->getQuotedColumnName('content', $this->platform);
+
+                    // Treat translation as original field type
+                    $fieldMapping = $meta->getFieldMapping($field);
+                    if ((($this->platform instanceof MySqlPlatform) &&
+                        in_array($fieldMapping["type"], array("decimal"))) ||
+                        (!($this->platform instanceof MySqlPlatform) &&
+                        !in_array($fieldMapping["type"], array("datetime", "datetimetz", "date", "time")))) {
+                        $type = Type::getType($fieldMapping["type"]);
+                        $substituteField = 'CAST('.$substituteField.' AS '.$type->getSQLDeclaration($fieldMapping, $this->platform).')';
+                    }
+
+                    // Fallback to original if was asked for
+                    if (($this->needsFallback() && (!isset($config['fallback'][$field]) || $config['fallback'][$field]))
+                        ||  (!$this->needsFallback() && isset($config['fallback'][$field]) && $config['fallback'][$field])
+                    ) {
+                        $substituteField = 'COALESCE('.$substituteField.', '.$originalField.')';
+                    }
+
+                    var_dump($originalField, $substituteField);
+                    $this->replacements[$originalField] = $substituteField;
                 }
-
-                // Fallback to original if was asked for
-                if (($this->needsFallback() && (!isset($config['fallback'][$field]) || $config['fallback'][$field]))
-                    ||  (!$this->needsFallback() && isset($config['fallback'][$field]) && $config['fallback'][$field])
-                ) {
-                    $substituteField = 'COALESCE('.$substituteField.', '.$originalField.')';
-                }
-
-                $this->replacements[$originalField] = $substituteField;
             }
         }
     }
@@ -388,6 +401,13 @@ class TranslationWalker extends SqlWalker
             $config = $this->listener->getConfiguration($em, $meta->name);
             if ($config && isset($config['fields'])) {
                 $this->translatedComponents[$alias] = $comp;
+            }
+            foreach ($meta->discriminatorMap as $childClass) {
+                $cm = $em->getClassMetadata($childClass);
+                $config = $this->listener->getConfiguration($em, $cm->name);
+                if ($config && isset($config['fields'])) {
+                    $this->translatedComponents[$alias] = $comp;
+                }
             }
         }
     }
