@@ -2,6 +2,7 @@
 
 use Doctrine\ORM\Query;
 use Gedmo\Translatable\TranslatableListener;
+use Gedmo\Translatable\Query\TreeWalker\TranslationWalker;
 
 $executionStart = microtime(true);
 $memoryStart = memory_get_usage(true);
@@ -45,35 +46,36 @@ if (!$food) {
     $em->flush();
 }
 
-// create query to fetch tree nodes
-$query = $em
+$em->getConnection()->getConfiguration()->setSQLLogger(new \Doctrine\DBAL\Logging\EchoSQLLogger());
+$baseQuery = $em
     ->createQueryBuilder()
     ->select('node')
     ->from('Example\Entity\Category', 'node')
     ->orderBy('node.root, node.lft', 'ASC')
     ->getQuery()
-;
-// set hint to translate nodes
-$query->setHint(
-    Doctrine\ORM\Query::HINT_CUSTOM_OUTPUT_WALKER,
-    'Gedmo\\Translatable\\Query\\TreeWalker\\TranslationWalker'
-);
-$treeDecorationOptions = array(
-    'decorate' => true,
-    'rootOpen' => '',
-    'rootClose' => '',
-    'childOpen' => '',
-    'childClose' => '',
-    'nodeDecorator' => function ($node) {
-        return str_repeat('-', $node['level']).$node['title'].PHP_EOL;
-    },
-);
-// build tree in english
-echo $repository->buildTree($query->getArrayResult(), $treeDecorationOptions).PHP_EOL.PHP_EOL;
-// change locale
+    ->useResultCache(true);
+
+$query = clone $baseQuery;
+$query->setHint(TranslatableListener::HINT_TRANSLATABLE_LOCALE, 'en');
+$query->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, TranslationWalker::class);
+$query->getResult();
+
+$query = clone $baseQuery;
 $query->setHint(TranslatableListener::HINT_TRANSLATABLE_LOCALE, 'lt');
-// build tree in lithuanian
-echo $repository->buildTree($query->getArrayResult(), $treeDecorationOptions).PHP_EOL.PHP_EOL;
+$query->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, TranslationWalker::class);
+$query->getResult();
+
+// cache hits follow
+var_dump("no on load events");
+$query = clone $baseQuery;
+$query->setHint(TranslatableListener::HINT_TRANSLATABLE_LOCALE, 'en');
+$query->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, TranslationWalker::class);
+$query->getResult();
+
+$query = clone $baseQuery;
+$query->setHint(TranslatableListener::HINT_TRANSLATABLE_LOCALE, 'lt');
+$query->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, TranslationWalker::class);
+$query->getResult();
 
 $ms = round(microtime(true) - $executionStart, 4) * 1000;
 $mem = round((memory_get_usage(true) - $memoryStart) / 1000000, 2);

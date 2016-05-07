@@ -68,6 +68,7 @@ $config->setMetadataDriverImpl($driverChain);
 // use our allready initialized cache driver
 $config->setMetadataCacheImpl($cache);
 $config->setQueryCacheImpl($cache);
+$config->setResultCacheImpl($cache);
 
 // Third, create event manager and hook prefered extension listeners
 $evm = new Doctrine\Common\EventManager();
