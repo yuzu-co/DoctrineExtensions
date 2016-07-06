@@ -17,7 +17,7 @@ class ValidatorTest extends \PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $this->meta = $this->getMock('Doctrine\ORM\Mapping\ClassMetadata', array(), array(), '', false);
+        $this->meta = $this->createMock('Doctrine\ORM\Mapping\ClassMetadata', array(), array(), '', false);
 
         Validator::$enableMimeTypesConfigException = false;
     }

@@ -111,7 +111,7 @@ abstract class BaseTestCaseOM extends \PHPUnit_Framework_TestCase
      */
     protected function getMockMappedDocumentManager($dbName, MappingDriver $mappingDriver = null)
     {
-        $conn = $this->getMock('Doctrine\\MongoDB\\Connection');
+        $conn = $this->createMock('Doctrine\\MongoDB\\Connection');
         $config = $this->getMockAnnotatedODMMongoDBConfig($dbName, $mappingDriver);
 
         $dm = DocumentManager::create($conn, $config, $this->getEventManager());
@@ -160,12 +160,12 @@ abstract class BaseTestCaseOM extends \PHPUnit_Framework_TestCase
      */
     protected function getMockMappedEntityManager(MappingDriver $mappingDriver = null)
     {
-        $driver = $this->getMock('Doctrine\DBAL\Driver');
+        $driver = $this->createMock('Doctrine\DBAL\Driver');
         $driver->expects($this->once())
             ->method('getDatabasePlatform')
-            ->will($this->returnValue($this->getMock('Doctrine\DBAL\Platforms\MySqlPlatform')));
+            ->will($this->returnValue($this->createMock('Doctrine\DBAL\Platforms\MySqlPlatform')));
 
-        $conn = $this->getMock('Doctrine\DBAL\Connection', array(), array(array(), $driver));
+        $conn = $this->createMock('Doctrine\DBAL\Connection', array(), array(array(), $driver));
         $conn->expects($this->once())
             ->method('getEventManager')
             ->will($this->returnValue($this->getEventManager()));
@@ -245,7 +245,7 @@ abstract class BaseTestCaseOM extends \PHPUnit_Framework_TestCase
      */
     private function getMockAnnotatedORMConfig(MappingDriver $mappingDriver = null)
     {
-        $config = $this->getMock('Doctrine\ORM\Configuration');
+        $config = $this->createMock('Doctrine\ORM\Configuration');
         $config->expects($this->once())
             ->method('getProxyDir')
             ->will($this->returnValue(__DIR__.'/../../temp'));

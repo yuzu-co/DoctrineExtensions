@@ -90,7 +90,7 @@ abstract class BaseTestCaseMongoODM extends \PHPUnit_Framework_TestCase
      */
     protected function getMockMappedDocumentManager(EventManager $evm = null, $config = null)
     {
-        $conn = $this->getMock('Doctrine\\MongoDB\\Connection');
+        $conn = $this->createMock('Doctrine\\MongoDB\\Connection');
 
         $config = $config ? $config : $this->getMockAnnotatedConfig();
 
